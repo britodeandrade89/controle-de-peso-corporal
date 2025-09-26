@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1E3A3A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BariControl</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary-color: #00796B; --dark-bg: #121212; --light-bg: #1E1E1E; --text-color: #E0E0E0; --gray-text: #888; --accent-color: #4DB6AC; }
+        body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--dark-bg); color: var(--text-color); }
+        .hidden { display: none !important; }
+
+        /* --- Splash Screen & Setup --- */
+        #splash-screen, #setup-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; padding: 20px; box-sizing: border-box; }
+        .logo { width: 120px; height: 120px; margin-bottom: 20px; }
+        h1 { color: white; font-size: 2.5em; margin: 0; }
+        h2 { color: var(--accent-color); margin-top: 10px; }
+        .setup-form input { width: 80%; max-width: 300px; padding: 15px; margin: 10px 0; border: 1px solid var(--gray-text); background-color: var(--light-bg); color: white; border-radius: 8px; font-size: 1.2em; text-align: center; }
+        .setup-form button, .btn { padding: 15px 30px; border: none; background-color: var(--primary-color); color: white; font-size: 1.2em; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; }
+        .setup-form button:hover, .btn:hover { background-color: var(--accent-color); }
+
+        /* --- Main App --- */
+        #app-container { padding: 20px; box-sizing: border-box; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center; margin-bottom: 20px; }
+        .card { background-color: var(--light-bg); padding: 20px; border-radius: 12px; }
+        .card .value { font-size: 2.2em; font-weight: bold; color: var(--accent-color); }
+        .card .label { font-size: 0.9em; color: var(--gray-text); margin-top: 5px; }
+        .full-width { grid-column: 1 / -1; }
+
+        /* --- Chart --- */
+        #chart-container { background-color: var(--light-bg); padding: 15px; border-radius: 12px; margin: 20px 0; }
+
+        /* --- History Table --- */
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        .history-table th { font-size: 0.8em; color: var(--gray-text); }
+        .delete-btn { background: none; border: none; color: #ff5252; cursor: pointer; font-size: 1.2em; }
+        
+        /* --- Add Button --- */
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: var(--primary-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; }
+
+        /* --- Modal --- */
+        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; }
+        #modal-content { background: var(--light-bg); padding: 30px; border-radius: 12px; text-align: center; width: 90%; max-width: 400px; }
+        #modal-content h3 { margin-top: 0; }
+        #modal-content input { width: 80%; }
+        #modal-content button { margin: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.944 12.482l-2.29 2.29a1 1 0 0 1-1.414 0l-2.29-2.29a.5.5 0 0 0-.707 0l-2.29 2.29a1 1 0 0 1-1.414-1.414l2.29-2.29a.5.5 0 0 0 0-.707l-2.29-2.29a1 1 0 0 1 1.414-1.414l2.29 2.29a.5.5 0 0 0 .707 0l2.29-2.29a1 1 0 0 1 1.414 1.414l-2.29 2.29a.5.5 0 0 0 0 .707l2.29 2.29a1 1 0 0 1 0 1.414z"/></svg>
+        </div>
+        <h1>BariControl</h1>
+    </div>
+
+    <div id="setup-screen" class="hidden">
+        <h2>Vamos começar!</h2>
+        <p>Precisamos de algumas informações iniciais para calcular seu progresso.</p>
+        <div class="setup-form">
+            <input type="number" id="altura" placeholder="Sua altura (ex: 1.75)">
+            <input type="number" id="peso-inicial" placeholder="Seu peso inicial (ex: 120.5)">
+            <button id="save-setup">Salvar e Começar</button>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div class="dashboard">
+            <div class="card full-width">
+                <div class="value" id="current-weight">-.-- kg</div>
+                <div class="label">Peso Atual</div>
+            </div>
+            <div class="card">
+                <div class="value" id="total-loss">-.-- kg</div>
+                <div class="label">Perda Total</div>
+            </div>
+            <div class="card">
+                <div class="value" id="current-imc">--.--</div>
+                <div class="label">IMC</div>
+            </div>
+        </div>
+
+        <div id="chart-container">
+            <canvas id="weight-chart"></canvas>
+        </div>
+        
+        <h2>Histórico de Pesagem</h2>
+        <div style="overflow-x:auto;">
+            <table class="history-table">
+                <thead>
+                    <tr><th>Data</th><th>Peso</th><th>Perda Mês</th><th>Perda Total</th><th>IMC</th><th></th></tr>
+                </thead>
+                <tbody id="history-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div id="fab-add" class="fab hidden">+</div>
+
+    <div id="modal" class="hidden">
+        <div id="modal-content">
+            <h3>Nova Pesagem</h3>
+            <input type="date" id="data-input">
+            <input type="number" id="peso-input" placeholder="Peso (ex: 85.5)">
+            <div>
+                <button id="save-entry" class="btn">Salvar</button>
+                <button id="cancel-entry" class="btn" style="background-color: var(--gray-text);">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ELEMENTOS DA UI
+            const splashScreen = document.getElementById('splash-screen');
+            const setupScreen = document.getElementById('setup-screen');
+            const appContainer = document.getElementById('app-container');
+            const fab = document.getElementById('fab-add');
+            const modal = document.getElementById('modal');
+
+            let userProfile = JSON.parse(localStorage.getItem('userProfile'));
+            let weightData = JSON.parse(localStorage.getItem('weightData')) || [];
+            let weightChart;
+
+            // LÓGICA DE INICIALIZAÇÃO
+            setTimeout(() => {
+                splashScreen.classList.add('hidden');
+                if (!userProfile) {
+                    setupScreen.classList.remove('hidden');
+                } else {
+                    appContainer.classList.remove('hidden');
+                    fab.classList.remove('hidden');
+                    renderAll();
+                }
+            }, 2000);
+
+            // --- SETUP ---
+            document.getElementById('save-setup').addEventListener('click', () => {
+                const altura = parseFloat(document.getElementById('altura').value.replace(',', '.'));
+                const pesoInicial = parseFloat(document.getElementById('peso-inicial').value.replace(',', '.'));
+
+                if (altura > 0 && pesoInicial > 0) {
+                    userProfile = { altura, pesoInicial };
+                    localStorage.setItem('userProfile', JSON.stringify(userProfile));
+                    setupScreen.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    fab.classList.remove('hidden');
+                    renderAll();
+                } else {
+                    alert('Por favor, insira valores válidos.');
+                }
+            });
+
+            // --- MODAL (ADICIONAR PESAGEM) ---
+            fab.addEventListener('click', () => {
+                document.getElementById('data-input').valueAsDate = new Date();
+                document.getElementById('peso-input').value = '';
+                modal.classList.remove('hidden');
+            });
+            document.getElementById('cancel-entry').addEventListener('click', () => modal.classList.add('hidden'));
+            document.getElementById('save-entry').addEventListener('click', () => {
+                const date = document.getElementById('data-input').value;
+                const weight = parseFloat(document.getElementById('peso-input').value.replace(',', '.'));
+
+                if (date && weight > 0) {
+                    weightData.push({ date, weight });
+                    weightData.sort((a, b) => new Date(a.date) - new Date(b.date)); // Manter sempre ordenado
+                    localStorage.setItem('weightData', JSON.stringify(weightData));
+                    renderAll();
+                    modal.classList.add('hidden');
+                } else {
+                    alert('Por favor, insira data e peso válidos.');
+                }
+            });
+
+            // --- FUNÇÕES DE CÁLCULO ---
+            const calculateIMC = (weight, height) => (weight / (height * height)).toFixed(2);
+            const calculateTotalLoss = (weight, startWeight) => (startWeight - weight).toFixed(2);
+            const calculateMonthlyLoss = (entryIndex, data) => {
+                const currentEntry = data[entryIndex];
+                const currentDate = new Date(currentEntry.date);
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+                
+                let lastMonthWeight = null;
+                for (let i = entryIndex - 1; i >= 0; i--) {
+                    const prevDate = new Date(data[i].date);
+                    if (prevDate.getFullYear() < currentYear || (prevDate.getFullYear() === currentYear && prevDate.getMonth() < currentMonth)) {
+                        lastMonthWeight = data[i].weight;
+                        break;
+                    }
+                }
+                
+                if (lastMonthWeight) {
+                    return (lastMonthWeight - currentEntry.weight).toFixed(2);
+                }
+                // Se não houver registro no mês anterior, calcula a partir do peso inicial
+                return (userProfile.pesoInicial - currentEntry.weight).toFixed(2);
+            };
+
+            // --- FUNÇÕES DE RENDERIZAÇÃO ---
+            function renderAll() {
+                if (!userProfile || weightData.length === 0) {
+                    // Limpa a tela se não houver dados
+                    document.getElementById('current-weight').textContent = '-.-- kg';
+                    document.getElementById('total-loss').textContent = '-.-- kg';
+                    document.getElementById('current-imc').textContent = '--.--';
+                    document.getElementById('history-body').innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma pesagem registrada.</td></tr>';
+                    if (weightChart) weightChart.destroy();
+                    return;
+                };
+
+                renderDashboard();
+                renderHistoryTable();
+                renderChart();
+            }
+
+            function renderDashboard() {
+                const latestEntry = weightData[weightData.length - 1];
+                document.getElementById('current-weight').textContent = `${latestEntry.weight.toFixed(2)} kg`;
+                document.getElementById('total-loss').textContent = `${calculateTotalLoss(latestEntry.weight, userProfile.pesoInicial)} kg`;
+                document.getElementById('current-imc').textContent = calculateIMC(latestEntry.weight, userProfile.altura);
+            }
+
+            function renderHistoryTable() {
+                const tableBody = document.getElementById('history-body');
+                tableBody.innerHTML = '';
+                weightData.forEach((entry, index) => {
+                    const row = document.createElement('tr');
+                    const formattedDate = new Date(entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td>${entry.weight.toFixed(2)} kg</td>
+                        <td>${calculateMonthlyLoss(index, weightData)} kg</td>
+                        <td>${calculateTotalLoss(entry.weight, userProfile.pesoInicial)} kg</td>
+                        <td>${calculateIMC(entry.weight, userProfile.altura)}</td>
+                        <td><button class="delete-btn" data-index="${index}">🗑️</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+                // Adiciona evento de clique aos botões de deletar
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const indexToDelete = parseInt(e.target.dataset.index);
+                        if (confirm('Tem certeza que deseja apagar este registro?')) {
+                            weightData.splice(indexToDelete, 1);
+                            localStorage.setItem('weightData', JSON.stringify(weightData));
+                            renderAll();
+                        }
+                    });
+                });
+            }
+
+            function renderChart() {
+                const ctx = document.getElementById('weight-chart').getContext('2d');
+                const labels = weightData.map(d => new Date(d.date).toLocaleDateString('pt-BR', {month: 'short', day: 'numeric'}));
+                const dataPoints = weightData.map(d => d.weight);
+
+                if (weightChart) {
+                    weightChart.destroy();
+                }
+
+                weightChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Peso (kg)',
+                            data: dataPoints,
+                            backgroundColor: 'rgba(0, 121, 107, 0.2)',
+                            borderColor: 'rgba(0, 121, 107, 1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: false },
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+            
+            // Registra o Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => console.error('Service worker registration failed:', err));
+            }
+        });
+    </script>
+</body>
+</html>
