@@ -1,0 +1,22 @@
+{
+  "name": "BariControl",
+  "short_name": "BariControl",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#121212",
+  "theme_color": "#1E3A3A",
+  "description": "Seu controle de peso pós-bariátrica, simples e eficiente.",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/google/material-design-icons/master/src/action/trending_down/materialicons/192px.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/google/material-design-icons/master/src/action/trending_down/materialicons/512px.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ]
+}
