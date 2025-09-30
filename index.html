@@ -2,300 +2,488 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Evolução</title>
+    
+    <!-- Meta tags for PWA -->
+    <meta name="theme-color" content="#556B2F"/>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1E3A3A">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BariControl</title>
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary-color: #00796B; --dark-bg: #121212; --light-bg: #1E1E1E; --text-color: #E0E0E0; --gray-text: #888; --accent-color: #4DB6AC; }
-        body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--dark-bg); color: var(--text-color); }
-        .hidden { display: none !important; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .chart-container {
+            position: relative;
+            height: 45vh;
+            width: 100%;
+        }
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
 
-        /* --- Splash Screen & Setup --- */
-        #splash-screen, #setup-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; padding: 20px; box-sizing: border-box; }
-        .logo { width: 120px; height: 120px; margin-bottom: 20px; }
-        h1 { color: white; font-size: 2.5em; margin: 0; }
-        h2 { color: var(--accent-color); margin-top: 10px; }
-        .setup-form input { width: 80%; max-width: 300px; padding: 15px; margin: 10px 0; border: 1px solid var(--gray-text); background-color: var(--light-bg); color: white; border-radius: 8px; font-size: 1.2em; text-align: center; }
-        .setup-form button, .btn { padding: 15px 30px; border: none; background-color: var(--primary-color); color: white; font-size: 1.2em; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; }
-        .setup-form button:hover, .btn:hover { background-color: var(--accent-color); }
+        .btn-primary {
+            background-color: #556B2F;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
 
-        /* --- Main App --- */
-        #app-container { padding: 20px; box-sizing: border-box; }
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center; margin-bottom: 20px; }
-        .card { background-color: var(--light-bg); padding: 20px; border-radius: 12px; }
-        .card .value { font-size: 2.2em; font-weight: bold; color: var(--accent-color); }
-        .card .label { font-size: 0.9em; color: var(--gray-text); margin-top: 5px; }
-        .full-width { grid-column: 1 / -1; }
+        .btn-primary:hover {
+            background-color: #4A5D29;
+        }
 
-        /* --- Chart --- */
-        #chart-container { background-color: var(--light-bg); padding: 15px; border-radius: 12px; margin: 20px 0; }
+        .cancel-btn {
+            background-color: #f3f4f6;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
 
-        /* --- History Table --- */
-        .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
-        .history-table th { font-size: 0.8em; color: var(--gray-text); }
-        .delete-btn { background: none; border: none; color: #ff5252; cursor: pointer; font-size: 1.2em; }
-        
-        /* --- Add Button --- */
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: var(--primary-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; }
+        .cancel-btn:hover {
+            background-color: #e5e7eb;
+        }
 
-        /* --- Modal --- */
-        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; }
-        #modal-content { background: var(--light-bg); padding: 30px; border-radius: 12px; text-align: center; width: 90%; max-width: 400px; }
-        #modal-content h3 { margin-top: 0; }
-        #modal-content input { width: 80%; }
-        #modal-content button { margin: 10px; }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -2px rgb(0 0 0 / 0.07);
+        }
     </style>
 </head>
-<body>
+<body class="antialiased text-gray-800">
 
-    <div id="splash-screen">
-        <div class="logo">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.944 12.482l-2.29 2.29a1 1 0 0 1-1.414 0l-2.29-2.29a.5.5 0 0 0-.707 0l-2.29 2.29a1 1 0 0 1-1.414-1.414l2.29-2.29a.5.5 0 0 0 0-.707l-2.29-2.29a1 1 0 0 1 1.414-1.414l2.29 2.29a.5.5 0 0 0 .707 0l2.29-2.29a1 1 0 0 1 1.414 1.414l-2.29 2.29a.5.5 0 0 0 0 .707l2.29 2.29a1 1 0 0 1 0 1.414z"/></svg>
-        </div>
-        <h1>BariControl</h1>
-    </div>
-
-    <div id="setup-screen" class="hidden">
-        <h2>Vamos começar!</h2>
-        <p>Precisamos de algumas informações iniciais para calcular seu progresso.</p>
-        <div class="setup-form">
-            <input type="number" id="altura" placeholder="Sua altura (ex: 1.75)">
-            <input type="number" id="peso-inicial" placeholder="Seu peso inicial (ex: 120.5)">
-            <button id="save-setup">Salvar e Começar</button>
-        </div>
-    </div>
-
-    <div id="app-container" class="hidden">
-        <div class="dashboard">
-            <div class="card full-width">
-                <div class="value" id="current-weight">-.-- kg</div>
-                <div class="label">Peso Atual</div>
+    <!-- Tela de Seleção de Cliente -->
+    <div id="client-selection-view">
+        <div class="max-w-4xl mx-auto p-4 md:p-8">
+            <header class="text-center mb-8">
+                <i class="fas fa-chart-line text-5xl text-[#556B2F] mb-2"></i>
+                <h1 class="text-4xl font-extrabold text-gray-800">Plataforma de Evolução</h1>
+                <p class="text-gray-500 mt-2">Selecione um cliente ou adicione um novo para começar.</p>
+            </header>
+            
+            <div id="client-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Cards de cliente são inseridos aqui -->
             </div>
-            <div class="card">
-                <div class="value" id="total-loss">-.-- kg</div>
-                <div class="label">Perda Total</div>
+             <div id="no-clients-message" class="text-center py-16 px-6 bg-white rounded-2xl shadow-sm mt-6 hidden">
+                <i class="fas fa-users text-5xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-700">Nenhum cliente cadastrado</h3>
+                <p class="text-gray-500 mt-2">Clique no botão abaixo para adicionar seu primeiro cliente e começar a acompanhar a evolução.</p>
             </div>
-            <div class="card">
-                <div class="value" id="current-imc">--.--</div>
-                <div class="label">IMC</div>
-            </div>
-        </div>
 
-        <div id="chart-container">
-            <canvas id="weight-chart"></canvas>
-        </div>
-        
-        <h2>Histórico de Pesagem</h2>
-        <div style="overflow-x:auto;">
-            <table class="history-table">
-                <thead>
-                    <tr><th>Data</th><th>Peso</th><th>Perda Mês</th><th>Perda Total</th><th>IMC</th><th></th></tr>
-                </thead>
-                <tbody id="history-body">
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <div id="fab-add" class="fab hidden">+</div>
-
-    <div id="modal" class="hidden">
-        <div id="modal-content">
-            <h3>Nova Pesagem</h3>
-            <input type="date" id="data-input">
-            <input type="number" id="peso-input" placeholder="Peso (ex: 85.5)">
-            <div>
-                <button id="save-entry" class="btn">Salvar</button>
-                <button id="cancel-entry" class="btn" style="background-color: var(--gray-text);">Cancelar</button>
-            </div>
+            <footer class="text-center mt-12">
+                <button id="add-client-btn" class="btn-primary">
+                    <i class="fas fa-plus mr-2"></i> Adicionar Novo Cliente
+                </button>
+            </footer>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // ELEMENTOS DA UI
-            const splashScreen = document.getElementById('splash-screen');
-            const setupScreen = document.getElementById('setup-screen');
-            const appContainer = document.getElementById('app-container');
-            const fab = document.getElementById('fab-add');
-            const modal = document.getElementById('modal');
+    <!-- Tela do Dashboard do Cliente -->
+    <div id="dashboard-view" class="hidden">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between md:items-center mb-6">
+                <div>
+                    <button id="back-to-clients-btn" class="text-sm text-[#556B2F] font-semibold hover:text-[#4A5D29] mb-2">
+                        <i class="fas fa-arrow-left mr-2"></i> Voltar para Clientes
+                    </button>
+                    <h1 id="client-name-header" class="text-3xl font-bold text-gray-800"></h1>
+                    <p class="text-gray-500">Painel de acompanhamento de progresso.</p>
+                </div>
+                 <button id="add-record-btn" class="btn-primary mt-4 md:mt-0">
+                    <i class="fas fa-plus mr-2"></i> Novo Registro
+                </button>
+            </header>
 
-            let userProfile = JSON.parse(localStorage.getItem('userProfile'));
-            let weightData = JSON.parse(localStorage.getItem('weightData')) || [];
-            let weightChart;
+            <!-- Cards de Métricas -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">Peso Atual</span><span id="current-peso" class="text-2xl font-bold text-[#556B2F]">- Kg</span></div>
+                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">IMC</span><span id="current-imc" class="text-2xl font-bold">-</span></div>
+                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">IAC</span><span id="current-iac" class="text-2xl font-bold">-</span></div>
+                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">TMB (Estimada)</span><span id="current-tmb" class="text-2xl font-bold">- Kcal</span></div>
+            </div>
 
-            // LÓGICA DE INICIALIZAÇÃO
-            setTimeout(() => {
-                splashScreen.classList.add('hidden');
-                if (!userProfile) {
-                    setupScreen.classList.remove('hidden');
-                } else {
-                    appContainer.classList.remove('hidden');
-                    fab.classList.remove('hidden');
-                    renderAll();
-                }
-            }, 2000);
+            <!-- Gráfico -->
+            <div class="card p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-700 mb-4">Gráfico de Evolução do Peso</h2>
+                <div class="chart-container"><canvas id="evolutionChart"></canvas></div>
+            </div>
 
-            // --- SETUP ---
-            document.getElementById('save-setup').addEventListener('click', () => {
-                const altura = parseFloat(document.getElementById('altura').value.replace(',', '.'));
-                const pesoInicial = parseFloat(document.getElementById('peso-inicial').value.replace(',', '.'));
+            <!-- Tabela de Histórico -->
+            <div class="card p-6">
+                <h2 class="text-xl font-bold text-gray-700 mb-4">Histórico de Registros</h2>
+                <div id="no-records-message" class="text-center py-10 hidden">
+                    <p class="text-gray-500">Nenhum registro encontrado. Adicione a primeira avaliação!</p>
+                </div>
+                <div class="overflow-x-auto" id="records-table-container">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Data</th><th class="px-6 py-3">Peso (Kg)</th><th class="px-6 py-3">Quadril (cm)</th><th class="px-6 py-3">IMC</th><th class="px-6 py-3">IAC</th><th class="px-6 py-3">Ações</th></tr></thead>
+                        <tbody id="history-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                if (altura > 0 && pesoInicial > 0) {
-                    userProfile = { altura, pesoInicial };
-                    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-                    setupScreen.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-                    fab.classList.remove('hidden');
-                    renderAll();
-                } else {
-                    alert('Por favor, insira valores válidos.');
-                }
+    <!-- Modal Adicionar/Editar Cliente -->
+    <div id="client-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden pointer-events-none opacity-0">
+        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform -translate-y-10">
+            <h3 class="text-xl font-bold mb-4">Adicionar Novo Cliente</h3>
+            <form id="client-form">
+                <div class="space-y-4">
+                    <div><label for="clientName" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="clientName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label for="clientHeight" class="block text-sm font-medium text-gray-700">Altura (cm)</label><input type="number" id="clientHeight" placeholder="Ex: 175" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
+                        <div><label for="clientBirthdate" class="block text-sm font-medium text-gray-700">Data de Nasc.</label><input type="date" id="clientBirthdate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700">Gênero</label><select id="clientGender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required><option value="male">Masculino</option><option value="female">Feminino</option></select></div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-btn">Cancelar</button><button type="submit" class="btn-primary">Salvar Cliente</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Registro de Avaliação -->
+    <div id="record-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden pointer-events-none opacity-0">
+        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform -translate-y-10">
+            <h3 class="text-xl font-bold mb-4">Adicionar Registro</h3>
+            <form id="record-form">
+                <div class="space-y-4">
+                    <div><label for="recordDate" class="block text-sm font-medium">Data</label><input type="date" id="recordDate" class="mt-1 block w-full rounded-md border-gray-300" required></div>
+                    <div><label for="recordPeso" class="block text-sm font-medium">Peso Corporal (Kg)</label><input type="number" step="0.1" id="recordPeso" placeholder="Ex: 85.5" class="mt-1 block w-full rounded-md border-gray-300" required></div>
+                    <div><label for="recordQuadril" class="block text-sm font-medium">Circunf. do Quadril (cm)</label><input type="number" step="0.1" id="recordQuadril" placeholder="Ex: 110.2" class="mt-1 block w-full rounded-md border-gray-300" required></div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-btn">Cancelar</button><button type="submit" class="btn-primary">Salvar Registro</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js') // Assuming sw.js is in the root
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
             });
+        }
 
-            // --- MODAL (ADICIONAR PESAGEM) ---
-            fab.addEventListener('click', () => {
-                document.getElementById('data-input').valueAsDate = new Date();
-                document.getElementById('peso-input').value = '';
-                modal.classList.remove('hidden');
-            });
-            document.getElementById('cancel-entry').addEventListener('click', () => modal.classList.add('hidden'));
-            document.getElementById('save-entry').addEventListener('click', () => {
-                const date = document.getElementById('data-input').value;
-                const weight = parseFloat(document.getElementById('peso-input').value.replace(',', '.'));
+        // --- DATABASE (INDEXEDDB) ---
+        let db;
+        const DB_NAME = 'EvolutionAppDB';
+        const DB_VERSION = 1;
 
-                if (date && weight > 0) {
-                    weightData.push({ date, weight });
-                    weightData.sort((a, b) => new Date(a.date) - new Date(b.date)); // Manter sempre ordenado
-                    localStorage.setItem('weightData', JSON.stringify(weightData));
-                    renderAll();
-                    modal.classList.add('hidden');
-                } else {
-                    alert('Por favor, insira data e peso válidos.');
-                }
-            });
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-            // --- FUNÇÕES DE CÁLCULO ---
-            const calculateIMC = (weight, height) => (weight / (height * height)).toFixed(2);
-            const calculateTotalLoss = (weight, startWeight) => (startWeight - weight).toFixed(2);
-            const calculateMonthlyLoss = (entryIndex, data) => {
-                const currentEntry = data[entryIndex];
-                const currentDate = new Date(currentEntry.date);
-                const currentMonth = currentDate.getMonth();
-                const currentYear = currentDate.getFullYear();
-                
-                let lastMonthWeight = null;
-                for (let i = entryIndex - 1; i >= 0; i--) {
-                    const prevDate = new Date(data[i].date);
-                    if (prevDate.getFullYear() < currentYear || (prevDate.getFullYear() === currentYear && prevDate.getMonth() < currentMonth)) {
-                        lastMonthWeight = data[i].weight;
-                        break;
+                request.onupgradeneeded = event => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains('clients')) {
+                        db.createObjectStore('clients', { keyPath: 'id', autoIncrement: true });
                     }
-                }
-                
-                if (lastMonthWeight) {
-                    return (lastMonthWeight - currentEntry.weight).toFixed(2);
-                }
-                // Se não houver registro no mês anterior, calcula a partir do peso inicial
-                return (userProfile.pesoInicial - currentEntry.weight).toFixed(2);
-            };
-
-            // --- FUNÇÕES DE RENDERIZAÇÃO ---
-            function renderAll() {
-                if (!userProfile || weightData.length === 0) {
-                    // Limpa a tela se não houver dados
-                    document.getElementById('current-weight').textContent = '-.-- kg';
-                    document.getElementById('total-loss').textContent = '-.-- kg';
-                    document.getElementById('current-imc').textContent = '--.--';
-                    document.getElementById('history-body').innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma pesagem registrada.</td></tr>';
-                    if (weightChart) weightChart.destroy();
-                    return;
+                    if (!db.objectStoreNames.contains('records')) {
+                        const recordStore = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+                        recordStore.createIndex('clientId', 'clientId', { unique: false });
+                    }
                 };
 
-                renderDashboard();
-                renderHistoryTable();
-                renderChart();
-            }
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    console.log('Database initialized successfully');
+                    resolve(db);
+                };
 
-            function renderDashboard() {
-                const latestEntry = weightData[weightData.length - 1];
-                document.getElementById('current-weight').textContent = `${latestEntry.weight.toFixed(2)} kg`;
-                document.getElementById('total-loss').textContent = `${calculateTotalLoss(latestEntry.weight, userProfile.pesoInicial)} kg`;
-                document.getElementById('current-imc').textContent = calculateIMC(latestEntry.weight, userProfile.altura);
-            }
+                request.onerror = event => {
+                    console.error('Database error:', event.target.errorCode);
+                    reject(event.target.error);
+                };
+            });
+        }
 
-            function renderHistoryTable() {
-                const tableBody = document.getElementById('history-body');
-                tableBody.innerHTML = '';
-                weightData.forEach((entry, index) => {
-                    const row = document.createElement('tr');
-                    const formattedDate = new Date(entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-                    row.innerHTML = `
-                        <td>${formattedDate}</td>
-                        <td>${entry.weight.toFixed(2)} kg</td>
-                        <td>${calculateMonthlyLoss(index, weightData)} kg</td>
-                        <td>${calculateTotalLoss(entry.weight, userProfile.pesoInicial)} kg</td>
-                        <td>${calculateIMC(entry.weight, userProfile.altura)}</td>
-                        <td><button class="delete-btn" data-index="${index}">🗑️</button></td>
-                    `;
-                    tableBody.appendChild(row);
-                });
+        // --- BIND UI EVENT LISTENERS ---
+        function bindEventListeners() {
+            // View buttons
+            document.getElementById('add-client-btn').addEventListener('click', () => App.openModal('client-modal'));
+            document.getElementById('back-to-clients-btn').addEventListener('click', () => App.changeView('client-selection'));
+            document.getElementById('add-record-btn').addEventListener('click', () => App.openModal('record-modal'));
+
+            // Forms
+            document.getElementById('client-form').addEventListener('submit', (e) => App.saveClient(e));
+            document.getElementById('record-form').addEventListener('submit', (e) => App.saveRecord(e));
+
+            // Modals
+            document.querySelectorAll('.modal .cancel-btn').forEach(btn => {
+                btn.addEventListener('click', () => App.closeModal(btn.closest('.modal').id));
+            });
+        }
+
+
+        // --- MAIN APP LOGIC ---
+        let evolutionChart = null;
+
+        const App = {
+            state: {
+                currentView: 'client-selection', // 'client-selection' or 'dashboard'
+                clients: [],
+                records: [],
+                selectedClient: null,
+            },
+
+            async init() {
+                try {
+                    await initDB();
+                    this.updateView();
+                } catch (error) {
+                    console.error("Falha ao inicializar o banco de dados:", error);
+                }
+            },
+
+            changeView(view) {
+                this.state.currentView = view;
+                this.updateView();
+            },
+
+            async updateView() {
+                const clientView = document.getElementById('client-selection-view');
+                const dashboardView = document.getElementById('dashboard-view');
+
+                if (this.state.currentView === 'client-selection') {
+                    clientView.classList.remove('hidden');
+                    dashboardView.classList.add('hidden');
+                    await this.loadClients();
+                } else {
+                    clientView.classList.add('hidden');
+                    dashboardView.classList.remove('hidden');
+                    document.getElementById('client-name-header').textContent = this.state.selectedClient.name;
+                    await this.loadRecords();
+                }
+            },
+
+            async loadClients() {
+                const transaction = db.transaction('clients', 'readonly');
+                const store = transaction.objectStore('clients');
+                const request = store.getAll();
                 
-                // Adiciona evento de clique aos botões de deletar
-                document.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const indexToDelete = parseInt(e.target.dataset.index);
-                        if (confirm('Tem certeza que deseja apagar este registro?')) {
-                            weightData.splice(indexToDelete, 1);
-                            localStorage.setItem('weightData', JSON.stringify(weightData));
-                            renderAll();
-                        }
+                request.onsuccess = () => {
+                    this.state.clients = request.result;
+                    this.renderClientList();
+                };
+            },
+
+            renderClientList() {
+                const list = document.getElementById('client-list');
+                const noClientsMsg = document.getElementById('no-clients-message');
+                list.innerHTML = '';
+                if (this.state.clients.length === 0) {
+                    noClientsMsg.classList.remove('hidden');
+                } else {
+                    noClientsMsg.classList.add('hidden');
+                    this.state.clients.forEach(client => {
+                        const card = document.createElement('div');
+                        card.className = 'card p-6 text-center cursor-pointer';
+                        card.innerHTML = `<i class="fas fa-user-circle text-4xl text-gray-400 mb-3"></i><h3 class="font-bold text-lg">${client.name}</h3>`;
+                        card.onclick = () => {
+                            this.state.selectedClient = client;
+                            this.changeView('dashboard');
+                        };
+                        list.appendChild(card);
                     });
-                });
-            }
+                }
+            },
 
-            function renderChart() {
-                const ctx = document.getElementById('weight-chart').getContext('2d');
-                const labels = weightData.map(d => new Date(d.date).toLocaleDateString('pt-BR', {month: 'short', day: 'numeric'}));
-                const dataPoints = weightData.map(d => d.weight);
+            async saveClient(event) {
+                event.preventDefault();
+                const client = {
+                    name: document.getElementById('clientName').value,
+                    height: parseInt(document.getElementById('clientHeight').value),
+                    birthdate: document.getElementById('clientBirthdate').value,
+                    gender: document.getElementById('clientGender').value,
+                };
+                const transaction = db.transaction('clients', 'readwrite');
+                const store = transaction.objectStore('clients');
+                store.add(client);
+                transaction.oncomplete = () => {
+                    this.closeModal('client-modal');
+                    this.loadClients();
+                };
+            },
 
-                if (weightChart) {
-                    weightChart.destroy();
+            async loadRecords() {
+                if (!this.state.selectedClient) return;
+                const transaction = db.transaction('records', 'readonly');
+                const store = transaction.objectStore('records');
+                const index = store.index('clientId');
+                const request = index.getAll(this.state.selectedClient.id);
+
+                request.onsuccess = () => {
+                    this.state.records = request.result.sort((a,b) => new Date(a.date) - new Date(b.date));
+                    this.updateDashboard();
+                };
+            },
+
+            updateDashboard() {
+                const latestRecord = this.state.records[this.state.records.length - 1];
+                if (latestRecord) {
+                    const { peso, imc, iac } = this.calculateMetrics(latestRecord.peso, latestRecord.quadril);
+                    const tmb = this.calculateTMB(latestRecord.peso);
+                    
+                    document.getElementById('current-peso').textContent = `${peso} Kg`;
+                    document.getElementById('current-imc').textContent = imc.toFixed(1);
+                    document.getElementById('current-iac').textContent = iac.toFixed(1);
+                    document.getElementById('current-tmb').textContent = `${tmb.toFixed(0)} Kcal`;
+                } else {
+                     document.getElementById('current-peso').textContent = '- Kg';
+                     document.getElementById('current-imc').textContent = '-';
+                     document.getElementById('current-iac').textContent = '-';
+                     document.getElementById('current-tmb').textContent = '- Kcal';
                 }
 
-                weightChart = new Chart(ctx, {
+                this.renderChart();
+                this.renderTable();
+            },
+
+            async saveRecord(event) {
+                event.preventDefault();
+                const record = {
+                    clientId: this.state.selectedClient.id,
+                    date: document.getElementById('recordDate').value,
+                    peso: parseFloat(document.getElementById('recordPeso').value),
+                    quadril: parseFloat(document.getElementById('recordQuadril').value),
+                };
+
+                const transaction = db.transaction('records', 'readwrite');
+                const store = transaction.objectStore('records');
+                store.add(record);
+                transaction.oncomplete = () => {
+                    this.closeModal('record-modal');
+                    this.loadRecords();
+                };
+            },
+
+            async deleteRecord(recordId) {
+                if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+                const transaction = db.transaction('records', 'readwrite');
+                const store = transaction.objectStore('records');
+                store.delete(recordId);
+                transaction.oncomplete = () => this.loadRecords();
+            },
+
+            calculateMetrics(peso, quadril) {
+                const heightM = this.state.selectedClient.height / 100;
+                const imc = peso / (heightM * heightM);
+                const iac = (quadril / (heightM * Math.sqrt(heightM))) - 18;
+                return { peso, imc, iac };
+            },
+
+            calculateTMB(peso) {
+                const { height, birthdate, gender } = this.state.selectedClient;
+                const age = new Date().getFullYear() - new Date(birthdate).getFullYear();
+                if (gender === 'male') {
+                    return 66 + (13.7 * peso) + (5 * height) - (6.8 * age);
+                } else {
+                    return 655 + (9.6 * peso) + (1.8 * height) - (4.7 * age);
+                }
+            },
+
+            renderChart() {
+                const ctx = document.getElementById('evolutionChart').getContext('2d');
+                if (evolutionChart) evolutionChart.destroy();
+                
+                const labels = this.state.records.map(r => new Date(r.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'}));
+                evolutionChart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Peso (kg)',
-                            data: dataPoints,
-                            backgroundColor: 'rgba(0, 121, 107, 0.2)',
-                            borderColor: 'rgba(0, 121, 107, 1)',
-                            borderWidth: 2,
-                            tension: 0.1,
-                            fill: true
-                        }]
+                        labels,
+                        datasets: [
+                            { 
+                                label: 'Peso (Kg)', 
+                                data: this.state.records.map(r => r.peso), 
+                                borderColor: '#556B2F', 
+                                backgroundColor: '#556B2F33',
+                                fill: true,
+                                tension: 0.3 
+                            },
+                        ]
                     },
-                    options: {
-                        scales: {
-                            y: { beginAtZero: false },
-                        },
-                        plugins: { legend: { display: false } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
                 });
+            },
+
+            renderTable() {
+                const tableBody = document.getElementById('history-table-body');
+                const noRecordsMsg = document.getElementById('no-records-message');
+                const tableContainer = document.getElementById('records-table-container');
+
+                tableBody.innerHTML = '';
+                if (this.state.records.length === 0) {
+                    noRecordsMsg.classList.remove('hidden');
+                    tableContainer.classList.add('hidden');
+                } else {
+                    noRecordsMsg.classList.add('hidden');
+                    tableContainer.classList.remove('hidden');
+                    this.state.records.forEach(record => {
+                        const { imc, iac } = this.calculateMetrics(record.peso, record.quadril);
+                        const row = document.createElement('tr');
+                        row.className = 'bg-white border-b hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="px-6 py-4">${new Date(record.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                            <td class="px-6 py-4 font-medium">${record.peso.toFixed(1)}</td>
+                            <td class="px-6 py-4">${record.quadril.toFixed(1)}</td>
+                            <td class="px-6 py-4">${imc.toFixed(1)}</td>
+                            <td class="px-6 py-4">${iac.toFixed(1)}</td>
+                            <td class="px-6 py-4"><button class="text-red-500 hover:text-red-700" data-id="${record.id}"><i class="fas fa-trash"></i></button></td>
+                        `;
+                        row.querySelector('button').onclick = (e) => this.deleteRecord(parseInt(e.currentTarget.dataset.id));
+                        tableBody.prepend(row);
+                    });
+                }
+            },
+
+            openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                modal.classList.remove('hidden', 'pointer-events-none', 'opacity-0');
+                // Reset forms
+                if (modalId === 'client-modal') document.getElementById('client-form').reset();
+                if (modalId === 'record-modal') {
+                     document.getElementById('record-form').reset();
+                     document.getElementById('recordDate').valueAsDate = new Date();
+                }
+            },
+
+            closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => modal.classList.add('hidden'), 300);
             }
-            
-            // Registra o Service Worker
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js').catch(err => console.error('Service worker registration failed:', err));
-            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            bindEventListeners();
+            App.init();
         });
     </script>
 </body>
 </html>
+
+
