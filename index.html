@@ -58,7 +58,7 @@
         .card {
             background-color: white;
             border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05 ), 0 2px 4px -2px rgb(0 0 0 / 0.05);
             transition: all 0.2s ease-in-out;
         }
         .card:hover {
@@ -70,9 +70,12 @@
 <body class="antialiased text-gray-800">
 
     <!-- Tela de Seleção de Cliente -->
-    <div id="client-selection-view">
+    <div id="client-selection-view" class="relative">
+        <button id="install-app-btn" class="absolute top-4 right-4 bg-white text-[#556B2F] py-2 px-4 rounded-lg shadow-md hover:bg-gray-50 hidden text-sm font-semibold">
+            <i class="fas fa-download mr-2"></i> Instalar App
+        </button>
         <div class="max-w-4xl mx-auto p-4 md:p-8">
-            <header class="text-center mb-8">
+            <header class="text-center mb-8 pt-8 md:pt-0">
                 <i class="fas fa-chart-line text-5xl text-[#556B2F] mb-2"></i>
                 <h1 class="text-4xl font-extrabold text-gray-800">Plataforma de Evolução</h1>
                 <p class="text-gray-500 mt-2">Selecione um cliente ou adicione um novo para começar.</p>
@@ -114,7 +117,11 @@
             <!-- Cards de Métricas -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">Peso Atual</span><span id="current-peso" class="text-2xl font-bold text-[#556B2F]">- Kg</span></div>
-                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">IMC</span><span id="current-imc" class="text-2xl font-bold">-</span></div>
+                <div class="card p-4 flex flex-col items-center justify-center text-center">
+                    <span class="text-sm text-gray-500">IMC</span>
+                    <span id="current-imc" class="text-2xl font-bold">-</span>
+                    <span id="imc-classification" class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 hidden"></span>
+                </div>
                 <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">IAC</span><span id="current-iac" class="text-2xl font-bold">-</span></div>
                 <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">TMB (Estimada)</span><span id="current-tmb" class="text-2xl font-bold">- Kcal</span></div>
             </div>
@@ -138,6 +145,9 @@
                     </table>
                 </div>
             </div>
+            <footer class="text-center text-xs text-gray-400 mt-8">
+                <p>Classificação de IMC baseada nas diretrizes da Organização Mundial da Saúde (OMS).</p>
+            </footer>
         </div>
     </div>
 
@@ -174,315 +184,23 @@
         </div>
     </div>
 
-    <script type="module">
-        // --- SERVICE WORKER REGISTRATION ---
+    <!-- Carrega o JavaScript do aplicativo -->
+    <script src="app.js" type="module"></script>
+    
+    <!-- Registra o Service Worker para o PWA -->
+    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js') // Assuming sw.js is in the root
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
+                        console.log('Service Worker registrado com sucesso!');
                     })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
+                    .catch(err => {
+                        console.log('Falha ao registrar o Service Worker: ', err);
                     });
             });
         }
-
-        // --- DATABASE (INDEXEDDB) ---
-        let db;
-        const DB_NAME = 'EvolutionAppDB';
-        const DB_VERSION = 1;
-
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-                request.onupgradeneeded = event => {
-                    db = event.target.result;
-                    if (!db.objectStoreNames.contains('clients')) {
-                        db.createObjectStore('clients', { keyPath: 'id', autoIncrement: true });
-                    }
-                    if (!db.objectStoreNames.contains('records')) {
-                        const recordStore = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
-                        recordStore.createIndex('clientId', 'clientId', { unique: false });
-                    }
-                };
-
-                request.onsuccess = event => {
-                    db = event.target.result;
-                    console.log('Database initialized successfully');
-                    resolve(db);
-                };
-
-                request.onerror = event => {
-                    console.error('Database error:', event.target.errorCode);
-                    reject(event.target.error);
-                };
-            });
-        }
-
-        // --- BIND UI EVENT LISTENERS ---
-        function bindEventListeners() {
-            // View buttons
-            document.getElementById('add-client-btn').addEventListener('click', () => App.openModal('client-modal'));
-            document.getElementById('back-to-clients-btn').addEventListener('click', () => App.changeView('client-selection'));
-            document.getElementById('add-record-btn').addEventListener('click', () => App.openModal('record-modal'));
-
-            // Forms
-            document.getElementById('client-form').addEventListener('submit', (e) => App.saveClient(e));
-            document.getElementById('record-form').addEventListener('submit', (e) => App.saveRecord(e));
-
-            // Modals
-            document.querySelectorAll('.modal .cancel-btn').forEach(btn => {
-                btn.addEventListener('click', () => App.closeModal(btn.closest('.modal').id));
-            });
-        }
-
-
-        // --- MAIN APP LOGIC ---
-        let evolutionChart = null;
-
-        const App = {
-            state: {
-                currentView: 'client-selection', // 'client-selection' or 'dashboard'
-                clients: [],
-                records: [],
-                selectedClient: null,
-            },
-
-            async init() {
-                try {
-                    await initDB();
-                    this.updateView();
-                } catch (error) {
-                    console.error("Falha ao inicializar o banco de dados:", error);
-                }
-            },
-
-            changeView(view) {
-                this.state.currentView = view;
-                this.updateView();
-            },
-
-            async updateView() {
-                const clientView = document.getElementById('client-selection-view');
-                const dashboardView = document.getElementById('dashboard-view');
-
-                if (this.state.currentView === 'client-selection') {
-                    clientView.classList.remove('hidden');
-                    dashboardView.classList.add('hidden');
-                    await this.loadClients();
-                } else {
-                    clientView.classList.add('hidden');
-                    dashboardView.classList.remove('hidden');
-                    document.getElementById('client-name-header').textContent = this.state.selectedClient.name;
-                    await this.loadRecords();
-                }
-            },
-
-            async loadClients() {
-                const transaction = db.transaction('clients', 'readonly');
-                const store = transaction.objectStore('clients');
-                const request = store.getAll();
-                
-                request.onsuccess = () => {
-                    this.state.clients = request.result;
-                    this.renderClientList();
-                };
-            },
-
-            renderClientList() {
-                const list = document.getElementById('client-list');
-                const noClientsMsg = document.getElementById('no-clients-message');
-                list.innerHTML = '';
-                if (this.state.clients.length === 0) {
-                    noClientsMsg.classList.remove('hidden');
-                } else {
-                    noClientsMsg.classList.add('hidden');
-                    this.state.clients.forEach(client => {
-                        const card = document.createElement('div');
-                        card.className = 'card p-6 text-center cursor-pointer';
-                        card.innerHTML = `<i class="fas fa-user-circle text-4xl text-gray-400 mb-3"></i><h3 class="font-bold text-lg">${client.name}</h3>`;
-                        card.onclick = () => {
-                            this.state.selectedClient = client;
-                            this.changeView('dashboard');
-                        };
-                        list.appendChild(card);
-                    });
-                }
-            },
-
-            async saveClient(event) {
-                event.preventDefault();
-                const client = {
-                    name: document.getElementById('clientName').value,
-                    height: parseInt(document.getElementById('clientHeight').value),
-                    birthdate: document.getElementById('clientBirthdate').value,
-                    gender: document.getElementById('clientGender').value,
-                };
-                const transaction = db.transaction('clients', 'readwrite');
-                const store = transaction.objectStore('clients');
-                store.add(client);
-                transaction.oncomplete = () => {
-                    this.closeModal('client-modal');
-                    this.loadClients();
-                };
-            },
-
-            async loadRecords() {
-                if (!this.state.selectedClient) return;
-                const transaction = db.transaction('records', 'readonly');
-                const store = transaction.objectStore('records');
-                const index = store.index('clientId');
-                const request = index.getAll(this.state.selectedClient.id);
-
-                request.onsuccess = () => {
-                    this.state.records = request.result.sort((a,b) => new Date(a.date) - new Date(b.date));
-                    this.updateDashboard();
-                };
-            },
-
-            updateDashboard() {
-                const latestRecord = this.state.records[this.state.records.length - 1];
-                if (latestRecord) {
-                    const { peso, imc, iac } = this.calculateMetrics(latestRecord.peso, latestRecord.quadril);
-                    const tmb = this.calculateTMB(latestRecord.peso);
-                    
-                    document.getElementById('current-peso').textContent = `${peso} Kg`;
-                    document.getElementById('current-imc').textContent = imc.toFixed(1);
-                    document.getElementById('current-iac').textContent = iac.toFixed(1);
-                    document.getElementById('current-tmb').textContent = `${tmb.toFixed(0)} Kcal`;
-                } else {
-                     document.getElementById('current-peso').textContent = '- Kg';
-                     document.getElementById('current-imc').textContent = '-';
-                     document.getElementById('current-iac').textContent = '-';
-                     document.getElementById('current-tmb').textContent = '- Kcal';
-                }
-
-                this.renderChart();
-                this.renderTable();
-            },
-
-            async saveRecord(event) {
-                event.preventDefault();
-                const record = {
-                    clientId: this.state.selectedClient.id,
-                    date: document.getElementById('recordDate').value,
-                    peso: parseFloat(document.getElementById('recordPeso').value),
-                    quadril: parseFloat(document.getElementById('recordQuadril').value),
-                };
-
-                const transaction = db.transaction('records', 'readwrite');
-                const store = transaction.objectStore('records');
-                store.add(record);
-                transaction.oncomplete = () => {
-                    this.closeModal('record-modal');
-                    this.loadRecords();
-                };
-            },
-
-            async deleteRecord(recordId) {
-                if (!confirm('Tem certeza que deseja excluir este registro?')) return;
-                const transaction = db.transaction('records', 'readwrite');
-                const store = transaction.objectStore('records');
-                store.delete(recordId);
-                transaction.oncomplete = () => this.loadRecords();
-            },
-
-            calculateMetrics(peso, quadril) {
-                const heightM = this.state.selectedClient.height / 100;
-                const imc = peso / (heightM * heightM);
-                const iac = (quadril / (heightM * Math.sqrt(heightM))) - 18;
-                return { peso, imc, iac };
-            },
-
-            calculateTMB(peso) {
-                const { height, birthdate, gender } = this.state.selectedClient;
-                const age = new Date().getFullYear() - new Date(birthdate).getFullYear();
-                if (gender === 'male') {
-                    return 66 + (13.7 * peso) + (5 * height) - (6.8 * age);
-                } else {
-                    return 655 + (9.6 * peso) + (1.8 * height) - (4.7 * age);
-                }
-            },
-
-            renderChart() {
-                const ctx = document.getElementById('evolutionChart').getContext('2d');
-                if (evolutionChart) evolutionChart.destroy();
-                
-                const labels = this.state.records.map(r => new Date(r.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'}));
-                evolutionChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [
-                            { 
-                                label: 'Peso (Kg)', 
-                                data: this.state.records.map(r => r.peso), 
-                                borderColor: '#556B2F', 
-                                backgroundColor: '#556B2F33',
-                                fill: true,
-                                tension: 0.3 
-                            },
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
-                });
-            },
-
-            renderTable() {
-                const tableBody = document.getElementById('history-table-body');
-                const noRecordsMsg = document.getElementById('no-records-message');
-                const tableContainer = document.getElementById('records-table-container');
-
-                tableBody.innerHTML = '';
-                if (this.state.records.length === 0) {
-                    noRecordsMsg.classList.remove('hidden');
-                    tableContainer.classList.add('hidden');
-                } else {
-                    noRecordsMsg.classList.add('hidden');
-                    tableContainer.classList.remove('hidden');
-                    this.state.records.forEach(record => {
-                        const { imc, iac } = this.calculateMetrics(record.peso, record.quadril);
-                        const row = document.createElement('tr');
-                        row.className = 'bg-white border-b hover:bg-gray-50';
-                        row.innerHTML = `
-                            <td class="px-6 py-4">${new Date(record.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                            <td class="px-6 py-4 font-medium">${record.peso.toFixed(1)}</td>
-                            <td class="px-6 py-4">${record.quadril.toFixed(1)}</td>
-                            <td class="px-6 py-4">${imc.toFixed(1)}</td>
-                            <td class="px-6 py-4">${iac.toFixed(1)}</td>
-                            <td class="px-6 py-4"><button class="text-red-500 hover:text-red-700" data-id="${record.id}"><i class="fas fa-trash"></i></button></td>
-                        `;
-                        row.querySelector('button').onclick = (e) => this.deleteRecord(parseInt(e.currentTarget.dataset.id));
-                        tableBody.prepend(row);
-                    });
-                }
-            },
-
-            openModal(modalId) {
-                const modal = document.getElementById(modalId);
-                modal.classList.remove('hidden', 'pointer-events-none', 'opacity-0');
-                // Reset forms
-                if (modalId === 'client-modal') document.getElementById('client-form').reset();
-                if (modalId === 'record-modal') {
-                     document.getElementById('record-form').reset();
-                     document.getElementById('recordDate').valueAsDate = new Date();
-                }
-            },
-
-            closeModal(modalId) {
-                const modal = document.getElementById(modalId);
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            }
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            bindEventListeners();
-            App.init();
-        });
     </script>
+
 </body>
 </html>
-
