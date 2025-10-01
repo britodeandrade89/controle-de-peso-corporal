@@ -1,206 +1,49 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Evolução</title>
-    
-    <!-- Meta tags for PWA -->
-    <meta name="theme-color" content="#556B2F"/>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f2f5;
+}
+.chart-container {
+    position: relative;
+    height: 45vh;
+    width: 100%;
+}
+.modal { transition: opacity 0.3s ease; }
+.modal-content { transition: transform 0.3s ease; }
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-        }
-        .chart-container {
-            position: relative;
-            height: 45vh;
-            width: 100%;
-        }
-        .modal { transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease; }
+.btn-primary {
+    background-color: #556B2F;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
 
-        .btn-primary {
-            background-color: #556B2F;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
+.btn-primary:hover {
+    background-color: #4A5D29;
+}
 
-        .btn-primary:hover {
-            background-color: #4A5D29;
-        }
+.cancel-btn {
+    background-color: #f3f4f6;
+    color: #374151;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
 
-        .cancel-btn {
-            background-color: #f3f4f6;
-            color: #374151;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
+.cancel-btn:hover {
+    background-color: #e5e7eb;
+}
 
-        .cancel-btn:hover {
-            background-color: #e5e7eb;
-        }
+.card {
+    background-color: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    transition: all 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -2px rgb(0 0 0 / 0.07);
+}
 
-        .card {
-            background-color: white;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05 ), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-            transition: all 0.2s ease-in-out;
-        }
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -2px rgb(0 0 0 / 0.07);
-        }
-    </style>
-</head>
-<body class="antialiased text-gray-800">
-
-    <!-- Tela de Seleção de Cliente -->
-    <div id="client-selection-view" class="relative">
-        <button id="install-app-btn" class="absolute top-4 right-4 bg-white text-[#556B2F] py-2 px-4 rounded-lg shadow-md hover:bg-gray-50 hidden text-sm font-semibold">
-            <i class="fas fa-download mr-2"></i> Instalar App
-        </button>
-        <div class="max-w-4xl mx-auto p-4 md:p-8">
-            <header class="text-center mb-8 pt-8 md:pt-0">
-                <i class="fas fa-chart-line text-5xl text-[#556B2F] mb-2"></i>
-                <h1 class="text-4xl font-extrabold text-gray-800">Plataforma de Evolução</h1>
-                <p class="text-gray-500 mt-2">Selecione um cliente ou adicione um novo para começar.</p>
-            </header>
-            
-            <div id="client-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Cards de cliente são inseridos aqui -->
-            </div>
-             <div id="no-clients-message" class="text-center py-16 px-6 bg-white rounded-2xl shadow-sm mt-6 hidden">
-                <i class="fas fa-users text-5xl text-gray-300 mb-4"></i>
-                <h3 class="text-xl font-bold text-gray-700">Nenhum cliente cadastrado</h3>
-                <p class="text-gray-500 mt-2">Clique no botão abaixo para adicionar seu primeiro cliente e começar a acompanhar a evolução.</p>
-            </div>
-
-            <footer class="text-center mt-12">
-                <button id="add-client-btn" class="btn-primary">
-                    <i class="fas fa-plus mr-2"></i> Adicionar Novo Cliente
-                </button>
-            </footer>
-        </div>
-    </div>
-
-    <!-- Tela do Dashboard do Cliente -->
-    <div id="dashboard-view" class="hidden">
-        <div class="p-4 md:p-8 max-w-7xl mx-auto">
-            <header class="flex flex-col md:flex-row justify-between md:items-center mb-6">
-                <div>
-                    <button id="back-to-clients-btn" class="text-sm text-[#556B2F] font-semibold hover:text-[#4A5D29] mb-2">
-                        <i class="fas fa-arrow-left mr-2"></i> Voltar para Clientes
-                    </button>
-                    <h1 id="client-name-header" class="text-3xl font-bold text-gray-800"></h1>
-                    <p class="text-gray-500">Painel de acompanhamento de progresso.</p>
-                </div>
-                 <button id="add-record-btn" class="btn-primary mt-4 md:mt-0">
-                    <i class="fas fa-plus mr-2"></i> Novo Registro
-                </button>
-            </header>
-
-            <!-- Cards de Métricas -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">Peso Atual</span><span id="current-peso" class="text-2xl font-bold text-[#556B2F]">- Kg</span></div>
-                <div class="card p-4 flex flex-col items-center justify-center text-center">
-                    <span class="text-sm text-gray-500">IMC</span>
-                    <span id="current-imc" class="text-2xl font-bold">-</span>
-                    <span id="imc-classification" class="text-xs font-semibold px-2 py-0.5 rounded-full mt-1 hidden"></span>
-                </div>
-                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">IAC</span><span id="current-iac" class="text-2xl font-bold">-</span></div>
-                <div class="card p-4 flex flex-col items-center justify-center text-center"><span class="text-sm text-gray-500">TMB (Estimada)</span><span id="current-tmb" class="text-2xl font-bold">- Kcal</span></div>
-            </div>
-
-            <!-- Gráfico -->
-            <div class="card p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-700 mb-4">Gráfico de Evolução do Peso</h2>
-                <div class="chart-container"><canvas id="evolutionChart"></canvas></div>
-            </div>
-
-            <!-- Tabela de Histórico -->
-            <div class="card p-6">
-                <h2 class="text-xl font-bold text-gray-700 mb-4">Histórico de Registros</h2>
-                <div id="no-records-message" class="text-center py-10 hidden">
-                    <p class="text-gray-500">Nenhum registro encontrado. Adicione a primeira avaliação!</p>
-                </div>
-                <div class="overflow-x-auto" id="records-table-container">
-                    <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Data</th><th class="px-6 py-3">Peso (Kg)</th><th class="px-6 py-3">Quadril (cm)</th><th class="px-6 py-3">IMC</th><th class="px-6 py-3">IAC</th><th class="px-6 py-3">Ações</th></tr></thead>
-                        <tbody id="history-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <footer class="text-center text-xs text-gray-400 mt-8">
-                <p>Classificação de IMC baseada nas diretrizes da Organização Mundial da Saúde (OMS).</p>
-            </footer>
-        </div>
-    </div>
-
-    <!-- Modal Adicionar/Editar Cliente -->
-    <div id="client-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden pointer-events-none opacity-0">
-        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform -translate-y-10">
-            <h3 class="text-xl font-bold mb-4">Adicionar Novo Cliente</h3>
-            <form id="client-form">
-                <div class="space-y-4">
-                    <div><label for="clientName" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="clientName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label for="clientHeight" class="block text-sm font-medium text-gray-700">Altura (cm)</label><input type="number" id="clientHeight" placeholder="Ex: 175" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
-                        <div><label for="clientBirthdate" class="block text-sm font-medium text-gray-700">Data de Nasc.</label><input type="date" id="clientBirthdate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required></div>
-                    </div>
-                    <div><label class="block text-sm font-medium text-gray-700">Gênero</label><select id="clientGender" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required><option value="male">Masculino</option><option value="female">Feminino</option></select></div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-btn">Cancelar</button><button type="submit" class="btn-primary">Salvar Cliente</button></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Adicionar Registro de Avaliação -->
-    <div id="record-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 hidden pointer-events-none opacity-0">
-        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform -translate-y-10">
-            <h3 class="text-xl font-bold mb-4">Adicionar Registro</h3>
-            <form id="record-form">
-                <div class="space-y-4">
-                    <div><label for="recordDate" class="block text-sm font-medium">Data</label><input type="date" id="recordDate" class="mt-1 block w-full rounded-md border-gray-300" required></div>
-                    <div><label for="recordPeso" class="block text-sm font-medium">Peso Corporal (Kg)</label><input type="number" step="0.1" id="recordPeso" placeholder="Ex: 85.5" class="mt-1 block w-full rounded-md border-gray-300" required></div>
-                    <div><label for="recordQuadril" class="block text-sm font-medium">Circunf. do Quadril (cm)</label><input type="number" step="0.1" id="recordQuadril" placeholder="Ex: 110.2" class="mt-1 block w-full rounded-md border-gray-300" required></div>
-                </div>
-                <div class="mt-6 flex justify-end space-x-3"><button type="button" class="cancel-btn">Cancelar</button><button type="submit" class="btn-primary">Salvar Registro</button></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Carrega o JavaScript do aplicativo -->
-    <script src="app.js" type="module"></script>
-    
-    <!-- Registra o Service Worker para o PWA -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registrado com sucesso!');
-                    })
-                    .catch(err => {
-                        console.log('Falha ao registrar o Service Worker: ', err);
-                    });
-            });
-        }
-    </script>
-
-</body>
-</html>
